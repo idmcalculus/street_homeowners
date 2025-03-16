@@ -22,6 +22,34 @@ A PHP application for parsing homeowner names from CSV files.
 - Composer (for PHPUnit)
 - Web server (Apache/Nginx)
 
+## Installation
+
+1. Clone the repository
+2. Install dependencies:
+   ```
+   composer install
+   ```
+
+## Usage
+
+1. Start a local PHP server:
+   ```
+   php -S localhost:8000
+   ```
+2. Open your browser and navigate to `http://localhost:8000`
+3. Upload a CSV file with homeowner names in the first column
+
+## CSV Format
+
+The CSV file should have one name per row in the first column. Example:
+
+```csv
+Name
+Mr J. Smith
+Mr and Mrs Smith
+Dr & Mrs Joe Bloggs
+```
+
 ## Running Tests
 
 Run the tests using the provided script:
@@ -79,3 +107,10 @@ After installing Xdebug, run the tests again:
 ```
 
 A coverage report will be generated in the `coverage-report` directory.
+
+## Security Considerations
+
+- The application validates file types and only accepts CSV files
+- Uploaded files are processed with unique names and cleaned up after processing
+- All output is properly escaped to prevent XSS attacks
+- File uploads are restricted to the uploads directory

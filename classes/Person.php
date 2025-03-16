@@ -146,8 +146,8 @@ class Person {
 	/**
 	 * Parses an individual name string into a Person object.
 	 *
-	 * Uses a brute-force approach by splitting on spaces and applying heuristics.
-	 *
+	 * Uses a brute-force approach by splitting on spaces and applying heuristics. Should definitely be optimised, maybe with regex
+	 * 
 	 * @param string $nameString The individual name string.
 	 * @param string|null $defaultLastName Optional common last name.
 	 * @return Person
