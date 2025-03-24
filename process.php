@@ -1,61 +1,70 @@
 <?php
+ob_start();
 session_start();
 require_once __DIR__ . '/vendor/autoload.php';
-use App\Person;
+
+use App\Services\NameParserFactory;
+use League\Csv\Reader;
 
 $uploadDirectory = __DIR__ . '/uploads/';
 if (!file_exists($uploadDirectory)) {
-	mkdir($uploadDirectory, 0777);
-}
-
-$file = $_FILES['csvFileInput'] ?? null;
-if (!$file) {
-	header('Location: index.php?error=' . urlencode('No file was uploaded.'));
-	exit;
-}
-
-$fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-if ($fileExtension !== 'csv') {
-	header('Location: index.php?error=' . urlencode('Invalid file type. Please upload a CSV file.'));
-	exit;
-}
-
-$uploadedFileName = uniqid('upload_', true) . '.csv';
-$uploadedFilePath = __DIR__ . '/uploads/' . $uploadedFileName;
-
-if (!move_uploaded_file($file['tmp_name'], $uploadedFilePath)) {
-	header('Location: index.php?error=' . urlencode('Failed to upload file.'));
-	exit;
+    mkdir($uploadDirectory, 0777);
 }
 
 try {
-	$parsedPeople = [];
+    $file = $_FILES['csvFileInput'] ?? null;
+    if (!$file) {
+        throw new RuntimeException('No file was uploaded.');
+    }
 
-	if (($csvHandle = fopen($uploadedFilePath, "r")) !== false) {
-		// Skip header row with all parameters to avoid deprecation warning
-		fgetcsv($csvHandle, 0, ',', '"', '\\');
+    // Validate file type
+    if (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'csv') {
+        throw new RuntimeException('Invalid file type. Please upload a CSV file.');
+    }
 
-		while (($rowData = fgetcsv($csvHandle, 0, ',', '"', '\\')) !== FALSE) {
-			$nameString = trim($rowData[0]);
-			if (empty($nameString)) continue;
+    // Create CSV reader instance
+    $csv = Reader::createFromPath($file['tmp_name'], 'r');
+    $csv->setHeaderOffset(0); // Skip header row
+    
+    // Get the header row to know the column name
+    $header = $csv->getHeader();
+    $nameColumnIndex = 0; // Default to first column
+    
+    $parsedPeople = [];
+    
+    // Create parser instance
+    $parser = NameParserFactory::create();
+    
+    // Process each record
+    foreach ($csv->getRecords() as $record) {
+        // Safely get the name string using array_values to ensure numeric indexing
+        $record = array_values($record);
+        $nameString = isset($record[$nameColumnIndex]) ? trim($record[$nameColumnIndex]) : '';
+        
+        if (empty($nameString)) continue;
 
-			$peopleFromRow = Person::parseNameString($nameString);
-			foreach ($peopleFromRow as $person) {
-				$parsedPeople[] = $person;
-			}
-		}
+        $peopleFromRow = $parser->parse($nameString);
+        $parsedPeople = array_merge($parsedPeople, $peopleFromRow);
+    }
 
-		fclose($csvHandle);
-	}
+    $_SESSION['processed_people'] = $parsedPeople;
 
-	$_SESSION['processed_people'] = $parsedPeople;
+    $uploadedFileName = uniqid('upload_', true) . '.csv';
+    $uploadedFilePath = __DIR__ . '/uploads/' . $uploadedFileName;
 
-	unlink($uploadedFilePath);
+    if (!move_uploaded_file($file['tmp_name'], $uploadedFilePath)) {
+        throw new RuntimeException('Failed to upload file.');
+    }
 
-	header('Location: index.php?success=1');
-	exit;
+    unlink($uploadedFilePath);
+
+    header('Location: index.php?success=1');
+    exit;
+
 } catch (Exception $e) {
-	unlink($uploadedFilePath);
-	header('Location: index.php?error=' . urlencode($e->getMessage()));
-	exit;
+    if (isset($uploadedFilePath) && file_exists($uploadedFilePath)) {
+        unlink($uploadedFilePath);
+    }
+    header('Location: index.php?error=' . urlencode($e->getMessage()));
+    exit;
 }

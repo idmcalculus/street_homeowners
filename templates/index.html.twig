@@ -1,0 +1,80 @@
+{% extends "base.html.twig" %}
+
+{% block content %}
+    <div class="form-container">
+        <h2 class="mb-4">Homeowners CSV Name Parser</h2>
+        <form action="process.php" method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="csvFileInput" class="form-label">Upload CSV File</label>
+                <input type="file" class="form-control" id="csvFileInput" name="csvFileInput" accept=".csv" required>
+                <div class="form-text">Please upload a CSV file containing homeowner names.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Process File</button>
+        </form>
+    </div>
+
+    {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+
+    {% if success %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            File processed successfully!
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+
+    {% if processed_people is not empty %}
+        <div class="display-format">
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="outputFormat" id="rawOutputFormat" value="raw" {{ format == 'raw' ? 'checked' : '' }}>
+                <label class="form-check-label" for="rawOutputFormat">Raw Data</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="outputFormat" id="tableOutputFormat" value="table" {{ format == 'table' ? 'checked' : '' }}>
+                <label class="form-check-label" for="tableOutputFormat">Table View</label>
+            </div>
+        </div>
+
+        <div id="output-container">
+            {% if format == 'raw' %}
+                <div class="results-container" id="rawDataView">
+                    <h3 class="mb-4">Raw Data</h3>
+                    <div class="raw-output">
+                        <pre>
+							{# processed_people|json_encode(constant('JSON_PRETTY_PRINT')) #} 
+							{{ dump(processed_people) }}
+						</pre>
+                    </div>
+                </div>
+            {% else %}
+                <div class="results-container" id="tableDataView">
+                    <h3 class="mb-4">Processed Results</h3>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>First Name</th>
+                                <th>Initials</th>
+                                <th>Last Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for person in processed_people %}
+                                <tr>
+                                    <td>{{ person.title }}</td>
+                                    <td>{{ person.firstName|default('') }}</td>
+                                    <td>{{ person.initials|default('') }}</td>
+                                    <td>{{ person.lastName }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}
